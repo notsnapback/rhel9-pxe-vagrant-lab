@@ -62,7 +62,7 @@ user --name=admin --groups=wheel --password=<ADMIN_PASSWORD_HASH>  --iscrypted
 To get the checksum on Linux:
 
 ```bash
-  sha256sum /path/to/rhel-9.6-x86_64-dvd.iso
+sha256sum /path/to/rhel-9.6-x86_64-dvd.iso
 ```
 
 3. `<HTTP_DIRECTORY>` - Point this to a local directory that contains your Kickstart file
