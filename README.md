@@ -29,11 +29,13 @@ It prevents accidental DHCP conflicts on your LAN and limits the blast radius of
 
 ## Build the RHEL Vagrant box with Packer
 
-I used **Packer (VirtualBox)** to turn the RHEL installer + a Kickstart file into a reusable Vagrant box. The Kickstart file was taken from a manual install of RHEL 9 I did on a Raspberry Pi.
+I used **Packer (VirtualBox)** to turn the RHEL ISO + a Kickstart file into a reusable Vagrant box. The Kickstart file was taken from a manual install of RHEL 9 I did on a Raspberry Pi.
 
 ### To use the Kickstart file you need to first fill in the placeholders.
 
-1. To Fill in <ROOT_PASSWORD_HASH> and <ADMIN_PASSWORD_HASH> generate a SHA-512 hash:
+> Note: these placeholders are for the root and admin users' passwords
+
+1. To Fill in `<ROOT_PASSWORD_HASH>` and `<ADMIN_PASSWORD_HASH>` generate a SHA-512 hash:
 
 You'll be prompted to type the password; paste the output into the KS file
 
@@ -41,7 +43,7 @@ You'll be prompted to type the password; paste the output into the KS file
 openssl passwd -6
 ```
 
-Paste it in your Kickstart file where it says <ROOT_PASSWORD_HASH> and <ADMIN_PASSWORD_HASH> (for each user seperately)
+Paste it in your Kickstart file where it says `<ROOT_PASSWORD_HASH>` and `<ADMIN_PASSWORD_HASH>` (for each user seperately)
 
 ```bash
 rootpw --iscrypted <ROOT_PASSWORD_HASH>
@@ -50,7 +52,7 @@ user --name=admin --groups=wheel --password=<ADMIN_PASSWORD_HASH>  --iscrypted
 
 ### To use the rhel9-stig.pkr.hcl file you need to first fill in the placeholders.
 
-1. `<ISO_URL>` — Is where the installer ISO is located use a `file://` URL that points to your RHEL ISO.
+1. `<ISO_URL>` — Is where the installer ISO is located, so use a `file://` URL to point to your RHEL ISO.
 
 - **Windows example:**  
   `iso_url = "file:///C:/Users/you/Downloads/rhel-9.6-x86_64-dvd.iso"`
@@ -72,7 +74,7 @@ sha256sum /path/to/rhel-9.6-x86_64-dvd.iso
 - **Linux/macOS example:**  
   `http_directory = "/home/you/pxe_lab/packer/http"`
 
-### To create the vagrant box using Packer run these commands in the same directory as the rhel9-stig.pkr.hcl file:
+### To create the vagrant box using Packer run these commands in the same directory as the `rhel9-stig.pkr.hcl` file:
 
 ```bash
 packer init .
@@ -80,12 +82,12 @@ packer validate .
 packer build .
 ```
 
-### Create the VMs with Vagrant (quick notes)
+## Create the VMs with Vagrant (quick notes)
 
 **Fill placeholders (if present):**
 
-- `<BOX_NAME>` — your base box, e.g., `user/rhel9-stig` or a local box you added.
-- `<BOX_URL>` — # e.g., file:///C:/path/to/rhel9-stig-pxebox.box
+- `<BOX_NAME>` — the name for your base box, e.g., `user/rhel9-stig` or a local box you added.
+- `<BOX_URL>` — (e.g., `file:///C:/path/to/rhel9-stig-pxebox.box`)
 - `<PXE_SERVER_IP>` — the server’s IP on the PXE network (e.g., `192.168.20.2`).
 - `<BRIDGE_ADAPTER>` — your NIC name if you enable bridged mode. Find it with:
 
@@ -93,7 +95,7 @@ packer build .
 VBoxManage list bridgedifs
 ```
 
-**Prereqs:** Install VirtualBox and Vagrant.
+> **Prereqs:** Install VirtualBox and Vagrant.
 
 To create a VM via Vagrant run the following command in the same directory as the Vagrantfile:
 
@@ -101,7 +103,7 @@ To create a VM via Vagrant run the following command in the same directory as th
 vagrant up
 ```
 
-Useful Commands:
+Other Useful Commands:
 
 ```bash
 vagrant ssh                  # shell into the VM
@@ -118,7 +120,7 @@ Use Vagrant to create the first VM to serve as the PXE Server
 
 > **Note:** You should run these commands as the root user
 
-> **Note** If you don't already, might be a good idea to install VIM: `dnf install -y vim`
+> **Note:** If you don't already, might be a good idea to install VIM: `dnf install -y vim`
 
 ## Install & enable Apache (HTTP)
 
@@ -143,7 +145,7 @@ vim /etc/dhcp/dhcpd.conf
 
 Enter the following configuration in the `/etc/dhcp/dhcpd.conf` file. Replace the addresses to match your network card.
 
-> **Note** Why `option routers` is commented out? We have commented out `option routers` to prevent a conflict with the client's internet connection. When this option is enabled, the PXE server's default gateway can interfere with the other nic's internet access. Leaving it out ensures a stable internet connection.
+> **Note:** Why `option routers` is commented out? We have commented out `option routers` to prevent a conflict with the client's internet connection. When this option is enabled, the default gateway assigned by the PXE server can interfere with the internet access of the other (non-PXE) nic for the client. Leaving it out ensures a stable internet connection.
 
 ```conf
 #
@@ -211,14 +213,20 @@ In order to rsync the files to directories that the admin user doesn't have perm
 vim /etc/ssh/sshd_config
 ```
 
-In `sshd_config` change PermitRootLogin and PasswordAuthentication to the following below:
+In `sshd_config` change `PermitRootLogin` and `PasswordAuthentication` to the following below:
 
 ```config
 PermitRootLogin yes
 PasswordAuthentication yes
 ```
 
-In `0-complianceascode-hardening.conf` PermitRootLogin to the following below:
+Update the `0-complianceascode-hardening.conf` file
+
+```bash
+vim /etc/ssh/sshd_config.d/00-complianceascode-hardening.conf
+```
+
+In the `0-complianceascode-hardening.conf` file change `PermitRootLogin` to the following below:
 
 ```config
 PermitRootLogin yes
@@ -324,7 +332,7 @@ label local
 
 `ip=dhcp` / `rd.neednet=1` – Brings up networking via DHCP and ensures the network is available during early boot.
 
-`inst.text` / `inst.debug` / `rd.shell` – Enables text-mode installer, extra logging, and an emergency shell for troubleshooting
+`inst.text` / `inst.debug` / `rd.shell` – Enables the text-mode installer, extra logging, and an emergency shell for troubleshooting
 
 ## Copy `vmlinuz` and `initrd.img` to the TFTP server
 
@@ -343,7 +351,7 @@ mkdir -p /var/lib/tftpboot/pxelinux/images/RHEL-9/
 cp /mnt/rhel9-iso/images/pxeboot/{vmlinuz,initrd.img} /var/lib/tftpboot/pxelinux/images/RHEL-9/
 ```
 
-## Create web root & bind mount via fstab:
+## Create the web root & bind mount via fstab:
 
 This step makes the ISO’s installation tree available over HTTP by adding two entries to `/etc/fstab`: one to loop-mount the ISO read-only at `/mnt/rhel9-iso`, and another to bind-mount that path into Apache’s docroot at `/var/www/html/rhel9` so it persists across reboots.
 
@@ -426,6 +434,8 @@ systemctl enable --now tftp.socket
 
 ## Creating the PXE Client (BIOS PXE boot)
 
+> You can find the Vagrantfile for the PXE Client in the Vagrnat directory
+
 You can now use Vagrant to create the second VM to serve as the PXE Client
 
 1. When you first PXE-Boot the client, have boot1 set to `net` and boot2 set to `disk`
@@ -445,6 +455,8 @@ You can now use Vagrant to create the second VM to serve as the PXE Client
 ## Booting via UEFI
 
 > If you decide to boot via UEFI make sure the vagrant file includes `"--firmware", "efi",`
+
+> As of VirtualBox 7.1, EFI booting is broken and PXE boot with EFI will not work correctly. To run this project with EFI enabled, you must use VirtualBox 7.0 instead.
 
 1. When you start the PXE Client VM via the `vagrant up` command close the dialog that pops up
 
