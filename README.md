@@ -82,6 +82,12 @@ packer validate .
 packer build .
 ```
 
+> This process is still a WIP and does not run all the way through. When the VM comes up, after it's finished intsalling, you will need to ssh in and reboot it in order for it to finish creating the Vagrant box. You would run the following commands:
+
+```bash
+sudo shutdown -P now
+```
+
 ## Create the VMs with Vagrant (quick notes)
 
 **Fill placeholders (if present):**
