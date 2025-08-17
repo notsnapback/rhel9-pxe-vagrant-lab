@@ -4,7 +4,7 @@ In this lab we will PXE-boot a Stig-Hardened RHEL 9 OS between two VMs using Vag
 
 ## Topology
 
-"insert <diagram> here"
+I'll insert a visual here eventually lol
 
 This lab uses two VMs provisioned via vagrant:
 
