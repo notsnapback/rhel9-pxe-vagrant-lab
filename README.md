@@ -31,6 +31,31 @@ It prevents accidental DHCP conflicts on your LAN and limits the blast radius of
 
 I used **Packer (VirtualBox)** to turn the RHEL ISO + a Kickstart file into a reusable Vagrant box. The Kickstart file was taken from a manual install of RHEL 9 I did on a Raspberry Pi.
 
+> You can download the RHEL 9 ISO from https://developers.redhat.com/products/rhel/download#rhelforsap896
+
+> **RHEL subscription required**
+> Create a **Red Hat Developer account** and register your host so `dnf` can access Red Hat repositories.
+
+1. Go to https://developers.redhat.com
+
+2. Click Log in, in the top right corner
+
+3. Near the bottom, click on "Register for a Red Hat account"
+
+4. Fill out your information
+
+5. Verify your account and login
+
+6. Click on your profile, an navigate to "Subscriptions"
+
+7. Fill out your information for a personal account
+
+**Register with your account (you’ll be prompted for the password):**
+
+```bash
+sudo subscription-manager register --username <USERNAME> --auto-attach
+```
+
 ### To use the Kickstart file you need to first fill in the placeholders.
 
 > Note: these placeholders are for the root and admin users' passwords
@@ -161,13 +186,13 @@ Enter the following configuration in the `/etc/dhcp/dhcpd.conf` file. Replace th
 #
 option architecture-type code 93 = unsigned integer 16;
 
-subnet 192.168.20.0 netmask 255.255.255.0 {
-#  option routers 192.168.20.2;
-  option domain-name-servers 192.168.20.2;
-  range 192.168.20.100 192.168.20.200;
+subnet <PXE_SUBNET> netmask 255.255.255.0 {
+#  option routers <PXE_SERVER_IP>;
+  option domain-name-servers <PXE_SERVER_IP>;
+  range <RANGE_START> <RANGE_END>;
   class "pxeclients" {
     match if substring (option vendor-class-identifier, 0, 9) = "PXEClient";
-    next-server 192.168.20.2;
+    next-server <PXE_SERVER_IP>;
           if option architecture-type = 00:07 {
             filename "redhat/EFI/BOOT/BOOTX64.EFI";
           }
@@ -178,7 +203,7 @@ subnet 192.168.20.0 netmask 255.255.255.0 {
   class "httpclients" {
     match if substring (option vendor-class-identifier, 0, 10) = "HTTPClient";
     option vendor-class-identifier "HTTPClient";
-    filename "http://192.168.20.2/redhat/EFI/BOOT/BOOTX64.EFI";
+    filename "http://<PXE_SERVER_IP>/redhat/EFI/BOOT/BOOTX64.EFI";
   }
 }
 ```
@@ -211,7 +236,7 @@ mkdir -p /mnt/rhel9-iso
 
 ## Upload the ISO and the Kickstart file to the PXE Server
 
-You can download the RHEL 9 ISO from https://developers.redhat.com/products/rhel/download#rhelforsap896
+> You can download the RHEL 9 ISO from https://developers.redhat.com/products/rhel/download#rhelforsap896
 
 In order to rsync the files to directories that the admin user doesn't have permission to access, you will have to loosen the stig to allow ssh as the root user.
 
@@ -315,16 +340,16 @@ label linux
   menu label ^Install RHEL 9
   menu default
   kernel images/RHEL-9/vmlinuz
-  append initrd=images/RHEL-9/initrd.img ip=dhcp inst.repo=http://192.168.20.2/rhel9/ inst.ks=http://192.168.20.2/rhel-9-ks.cfg
+  append initrd=images/RHEL-9/initrd.img ip=dhcp inst.repo=http://<PXE_SERVER_IP>/rhel9/ inst.ks=http://<PXE_SERVER_IP>/rhel-9-ks.cfg
 label vesa
   menu label Install system with ^basic video driver
   kernel images/RHEL-9/vmlinuz
-  append initrd=images/RHEL-9/initrd.img ip=dhcp inst.xdriver=vesa nomodeset inst.repo=http://192.168.20.2/rhel9/
+  append initrd=images/RHEL-9/initrd.img ip=dhcp inst.xdriver=vesa nomodeset inst.repo=http://<PXE_SERVER_IP>/rhel9/
 label rescue
   menu label ^Rescue installed system
   kernel images/RHEL-9/vmlinuz
   append initrd=images/RHEL-9/initrd.img inst.rescue
-  inst.repo=http://192.168.20.2/rhel9/
+  inst.repo=http://<PXE_SERVER_IP>/rhel9/
 label local
   menu label Boot from ^local drive
   localboot 0xffff
